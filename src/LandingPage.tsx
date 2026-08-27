@@ -199,15 +199,16 @@ const useStyles = makeStyles({
   },
 });
 
-type LandingPageProps = {
+type FluentUIPageProps = {
   themeName: ThemeName;
   dir: Direction;
   onThemeChange: (themeName: ThemeName) => void;
   onDirChange: (dir: Direction) => void;
+  onNavigate: (path: string) => void;
 };
 
-export const LandingPage = (props: LandingPageProps) => {
-  const { themeName, dir, onThemeChange, onDirChange } = props;
+export const FluentUIPage = (props: FluentUIPageProps) => {
+  const { themeName, dir, onThemeChange, onDirChange, onNavigate } = props;
   const styles = useStyles();
   const themeDropdownId = useId('theme');
 
@@ -222,6 +223,19 @@ export const LandingPage = (props: LandingPageProps) => {
           </Badge>
         </div>
         <nav className={styles.nav} aria-label="Page">
+          <Link
+            href="/"
+            onClick={event => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                return;
+              }
+
+              event.preventDefault();
+              onNavigate('/');
+            }}
+          >
+            Home
+          </Link>
           <Link href="#features">Features</Link>
           <Link href="#themes">Themes</Link>
           <Link href="#direction">Direction</Link>
@@ -264,8 +278,8 @@ export const LandingPage = (props: LandingPageProps) => {
           <Badge appearance="filled" color="brand">
             FluentProvider
           </Badge>
-          <Title1>A themed landing page</Title1>
-          <Body1>
+          <Title1 as="h1">A themed landing page</Title1>
+          <Body1 as="p">
             FluentProvider turns a theme into CSS variables and passes settings such as direction to every Fluent UI
             component below it. Switch the page theme or text direction from the header to see the whole layout update.
           </Body1>
@@ -280,7 +294,7 @@ export const LandingPage = (props: LandingPageProps) => {
         </section>
 
         <section className={styles.section} id="features">
-          <Title2>What the provider gives you</Title2>
+          <Title2 as="h2">What the provider gives you</Title2>
           <div className={styles.featureGrid}>
             <Card className={styles.featureCard}>
               <CardHeader
@@ -288,7 +302,7 @@ export const LandingPage = (props: LandingPageProps) => {
                 header={<Subtitle1>Themes</Subtitle1>}
                 description={<Caption1>Web and Teams, light and dark</Caption1>}
               />
-              <Body1>
+              <Body1 as="p">
                 Apply webLightTheme, webDarkTheme, teamsLightTheme, or teamsDarkTheme. Brand, colour, and elevation
                 tokens update together.
               </Body1>
@@ -299,7 +313,7 @@ export const LandingPage = (props: LandingPageProps) => {
                 header={<Subtitle1>Nested providers</Subtitle1>}
                 description={<Caption1>Override a region of the page</Caption1>}
               />
-              <Body1>
+              <Body1 as="p">
                 Nest another FluentProvider to restyle a subtree. Each sample below keeps its own theme, even when the
                 page theme changes.
               </Body1>
@@ -310,7 +324,7 @@ export const LandingPage = (props: LandingPageProps) => {
                 header={<Subtitle1>Direction</Subtitle1>}
                 description={<Caption1>Left to right or right to left</Caption1>}
               />
-              <Body1>
+              <Body1 as="p">
                 Set dir on FluentProvider to render LTR or RTL. Layout, alignment, and reading order follow the
                 provider.
               </Body1>
@@ -319,8 +333,8 @@ export const LandingPage = (props: LandingPageProps) => {
         </section>
 
         <section className={styles.section} id="themes">
-          <Title2>Nested colour themes</Title2>
-          <Body1>
+          <Title2 as="h2">Nested colour themes</Title2>
+          <Body1 as="p">
             These nested providers match the FluentProvider default story. Their theme stays local, so you can compare
             palettes against the page theme you selected above.
           </Body1>
@@ -335,8 +349,8 @@ export const LandingPage = (props: LandingPageProps) => {
         </section>
 
         <section className={styles.section} id="direction">
-          <Title2>Text direction</Title2>
-          <Body1>A provider can render a region left-to-right or right-to-left without changing the rest of the page.</Body1>
+          <Title2 as="h2">Text direction</Title2>
+          <Body1 as="p">A provider can render a region left-to-right or right-to-left without changing the rest of the page.</Body1>
           <div className={styles.dirRow}>
             <FluentProvider className={styles.provider} theme={webLightTheme} dir="ltr">
               <div className={styles.dirSample}>Text left to right</div>
@@ -350,8 +364,8 @@ export const LandingPage = (props: LandingPageProps) => {
         <Divider />
 
         <section className={styles.section}>
-          <Title3>Components pick up the page theme</Title3>
-          <Body1>
+          <Title3 as="h3">Components pick up the page theme</Title3>
+          <Body1 as="p">
             Cards, buttons, and typography all read tokens from the nearest FluentProvider. Change the header theme to
             restyle this card.
           </Body1>
@@ -378,7 +392,7 @@ export const LandingPage = (props: LandingPageProps) => {
 
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
-        <Caption1>
+        <Caption1 as="p">
           Built with FluentProvider.{' '}
           <Link href={DOCS_URL} target="_blank" rel="noreferrer">
             Read the docs
