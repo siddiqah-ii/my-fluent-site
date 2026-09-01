@@ -34,6 +34,7 @@ import {
   OpenRegular,
   ShareRegular,
 } from '@fluentui/react-icons';
+import { AppLink } from './AppNav';
 import type { Direction, ThemeName } from './themes';
 import { themeOptions } from './themes';
 
@@ -223,19 +224,12 @@ export const FluentUIPage = (props: FluentUIPageProps) => {
           </Badge>
         </div>
         <nav className={styles.nav} aria-label="Page">
-          <Link
-            href="/"
-            onClick={event => {
-              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-                return;
-              }
-
-              event.preventDefault();
-              onNavigate('/');
-            }}
-          >
+          <AppLink href="/" onNavigate={onNavigate}>
             Home
-          </Link>
+          </AppLink>
+          <AppLink href="/referral" onNavigate={onNavigate}>
+            Referrals
+          </AppLink>
           <Link href="#features">Features</Link>
           <Link href="#themes">Themes</Link>
           <Link href="#direction">Direction</Link>

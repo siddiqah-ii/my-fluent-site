@@ -6,7 +6,6 @@ import {
   Dropdown,
   Field,
   Input,
-  Link,
   MessageBar,
   MessageBarBody,
   MessageBarTitle,
@@ -19,21 +18,15 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { AppLink, PageHeader } from './AppNav';
+import type { ReferralPriority } from './ReferralBadges';
+import type { Referral } from './referrals';
 
 const useStyles = makeStyles({
   page: {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
-  },
-  header: {
-    borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXXL}`,
-    maxWidth: '960px',
-    width: '100%',
-    boxSizing: 'border-box',
-    marginLeft: 'auto',
-    marginRight: 'auto',
   },
   main: {
     display: 'flex',
@@ -64,6 +57,12 @@ const useStyles = makeStyles({
     display: 'flex',
     flexWrap: 'wrap',
     gap: tokens.spacingHorizontalM,
+  },
+  successActions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: tokens.spacingHorizontalS,
+    marginTop: tokens.spacingVerticalS,
   },
   errorList: {
     margin: `${tokens.spacingVerticalS} 0 0`,
@@ -166,14 +165,35 @@ const formatDraftTime = (date: Date) =>
 
 type NewReferralFormPageProps = {
   onNavigate: (path: string) => void;
+  onCreate: (referral: Referral) => void;
 };
 
+const referralFromForm = (form: FormState): Referral => ({
+  id: `${Date.now()}`,
+  name: form.fullName.trim(),
+  assignedWorker: null,
+  daysOpen: 0,
+  status: 'New',
+  priority: form.priority as ReferralPriority,
+  dateOfBirth: form.dateOfBirth
+    ? new Date(form.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : undefined,
+  nhsNumber: form.nhsNumber.trim() || undefined,
+  address: form.address.trim() || undefined,
+  reason: form.reason.trim(),
+  safeguardingConcern: form.safeguarding === 'Yes' ? form.concern.trim() : undefined,
+  immediateRisk: form.safeguarding === 'Yes' ? form.immediateRisk : undefined,
+  notes: [],
+  documents: [],
+});
+
 export const NewReferralFormPage = (props: NewReferralFormPageProps) => {
-  const { onNavigate } = props;
+  const { onNavigate, onCreate } = props;
   const styles = useStyles();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const skipDraftSave = useRef(true);
 
@@ -189,6 +209,7 @@ export const NewReferralFormPage = (props: NewReferralFormPageProps) => {
   const updateField = (field: FormField, value: string) => {
     setForm(current => ({ ...current, [field]: value }));
     setSubmitted(false);
+    setCreatedId(null);
     setErrors(current => {
       if (!current[field]) {
         return current;
@@ -203,7 +224,16 @@ export const NewReferralFormPage = (props: NewReferralFormPageProps) => {
   const submit = () => {
     const nextErrors = validate(form);
     setErrors(nextErrors);
-    setSubmitted(Object.keys(nextErrors).length === 0);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setSubmitted(false);
+      return;
+    }
+
+    const referral = referralFromForm(form);
+    onCreate(referral);
+    setCreatedId(referral.id);
+    setSubmitted(true);
   };
 
   const errorFields = (Object.keys(errors) as FormField[]).filter(field => errors[field]);
@@ -212,24 +242,16 @@ export const NewReferralFormPage = (props: NewReferralFormPageProps) => {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <Link
-          href="/"
-          onClick={event => {
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-              return;
-            }
-
-            event.preventDefault();
-            onNavigate('/');
-          }}
-        >
-          Home
-        </Link>
-      </header>
+      <PageHeader currentPath="/new-referral" onNavigate={onNavigate} />
 
       <main className={styles.main}>
         <div className={styles.intro}>
+          <Caption1>
+            <AppLink href="/referral" onNavigate={onNavigate}>
+              Referrals
+            </AppLink>
+            {' / New referral'}
+          </Caption1>
           <Title1 as="h1">New referral</Title1>
           <Body1 as="p">
             Use this form to refer someone for adult social care support. Required fields are marked with an asterisk.
@@ -257,11 +279,19 @@ export const NewReferralFormPage = (props: NewReferralFormPageProps) => {
           </MessageBar>
         ) : null}
 
-        {submitted ? (
+        {submitted && createdId ? (
           <MessageBar intent="success">
             <MessageBarBody>
               <MessageBarTitle>Referral submitted</MessageBarTitle>
-              It will appear on the referral list for allocation.
+              It is now on the referral list for allocation.
+              <div className={styles.successActions}>
+                <Button appearance="primary" onClick={() => onNavigate(`/referral-detail?id=${createdId}`)}>
+                  View referral
+                </Button>
+                <Button appearance="secondary" onClick={() => onNavigate('/referral')}>
+                  View all referrals
+                </Button>
+              </div>
             </MessageBarBody>
           </MessageBar>
         ) : null}
@@ -380,20 +410,17 @@ export const NewReferralFormPage = (props: NewReferralFormPageProps) => {
                 />
               </Field>
               <Field label={fieldLabels.immediateRisk} required {...fieldError(errors, 'immediateRisk')}>
-                <Dropdown
-                  placeholder="Select an option"
-                  selectedOptions={form.immediateRisk ? [form.immediateRisk] : []}
+                <RadioGroup
+                  layout="horizontal"
                   value={form.immediateRisk}
-                  onOptionSelect={(_event, data) => {
-                    if (data.optionValue) {
-                      updateField('immediateRisk', data.optionValue);
-                    }
+                  onChange={(_event, data) => {
+                    updateField('immediateRisk', data.value);
                   }}
                 >
-                  <Option value="Yes">Yes</Option>
-                  <Option value="No">No</Option>
-                  <Option value="Not sure">Not sure</Option>
-                </Dropdown>
+                  <Radio value="Yes" label="Yes" />
+                  <Radio value="No" label="No" />
+                  <Radio value="Not sure" label="Not sure" />
+                </RadioGroup>
               </Field>
             </>
           ) : null}
@@ -434,6 +461,9 @@ export const NewReferralFormPage = (props: NewReferralFormPageProps) => {
         <div className={styles.actions}>
           <Button appearance="primary" onClick={submit}>
             Submit referral
+          </Button>
+          <Button appearance="secondary" onClick={() => onNavigate('/referral')}>
+            Cancel
           </Button>
         </div>
       </main>

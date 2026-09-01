@@ -6,7 +6,6 @@ import {
   Button,
   Caption1,
   Field,
-  Link,
   MessageBar,
   MessageBarBody,
   MessageBarTitle,
@@ -18,22 +17,22 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { AppLink, PageHeader } from './AppNav';
 import { PriorityBadge, StatusBadge } from './ReferralBadges';
+import {
+  DEFAULT_DETAIL_ID,
+  findReferral,
+  formatDaysOpen,
+  type DocumentItem,
+  type Note,
+  type Referral,
+} from './referrals';
 
 const useStyles = makeStyles({
   page: {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
-  },
-  header: {
-    borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXXL}`,
-    maxWidth: '960px',
-    width: '100%',
-    boxSizing: 'border-box',
-    marginLeft: 'auto',
-    marginRight: 'auto',
   },
   main: {
     display: 'flex',
@@ -50,6 +49,13 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
+  },
+  introHeader: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: tokens.spacingHorizontalM,
   },
   meta: {
     display: 'flex',
@@ -117,51 +123,31 @@ const ReadOnlyField = (props: { label: string; hint?: ReactElement; children: Re
 const formatDisplayDate = (date: Date) =>
   date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
+const displayValue = (value?: string) => {
+  const text = value?.trim();
+  return text ? text : 'Not recorded';
+};
+
 type TabValue = 'overview' | 'person' | 'risk' | 'notes' | 'documents';
 
-type Note = {
-  id: string;
-  date: string;
-  text: string;
-};
-
-type DocumentItem = {
-  id: string;
-  name: string;
-  date: string;
-};
-
-const initialNotes: Note[] = [
-  {
-    id: '1',
-    date: '12 March 2026',
-    text: 'NHS discharge liaison opened this referral after a hospital stay.',
-  },
-  {
-    id: '2',
-    date: '13 March 2026',
-    text: 'Duty team flagged a safeguarding concern from a neighbour.',
-  },
-];
-
-const initialDocuments: DocumentItem[] = [
-  { id: '1', name: 'Hospital discharge summary.pdf', date: '12 March 2026' },
-  { id: '2', name: 'Safeguarding notification.docx', date: '13 March 2026' },
-];
-
 type ReferralDetailPageProps = {
+  referralId?: string;
+  referrals: Referral[];
   onNavigate: (path: string) => void;
 };
 
 export const ReferralDetailPage = (props: ReferralDetailPageProps) => {
-  const { onNavigate } = props;
+  const { referralId, referrals, onNavigate } = props;
+  const referral = referralId
+    ? findReferral(referrals, referralId)
+    : findReferral(referrals, DEFAULT_DETAIL_ID);
   const styles = useStyles();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedTab, setSelectedTab] = useState<TabValue>('overview');
   const [noteText, setNoteText] = useState('');
-  const [notes, setNotes] = useState<Note[]>(initialNotes);
-  const [documents, setDocuments] = useState<DocumentItem[]>(initialDocuments);
+  const [notes, setNotes] = useState<Note[]>(referral?.notes ?? []);
+  const [documents, setDocuments] = useState<DocumentItem[]>(referral?.documents ?? []);
 
   const addNote = () => {
     const text = noteText.trim();
@@ -170,10 +156,7 @@ export const ReferralDetailPage = (props: ReferralDetailPageProps) => {
       return;
     }
 
-    setNotes(current => [
-      { id: `${Date.now()}`, date: formatDisplayDate(new Date()), text },
-      ...current,
-    ]);
+    setNotes(current => [{ id: `${Date.now()}`, date: formatDisplayDate(new Date()), text }, ...current]);
     setNoteText('');
   };
 
@@ -199,42 +182,58 @@ export const ReferralDetailPage = (props: ReferralDetailPageProps) => {
     setDocuments(current => current.filter(document => document.id !== id));
   };
 
+  if (!referral) {
+    return (
+      <div className={styles.page}>
+        <PageHeader currentPath="/referral-detail" onNavigate={onNavigate} />
+        <main className={styles.main}>
+          <Title1 as="h1">Referral not found</Title1>
+          <Body1 as="p">This referral is not on the list.</Body1>
+          <AppLink href="/referral" onNavigate={onNavigate}>
+            Back to referrals
+          </AppLink>
+        </main>
+      </div>
+    );
+  }
+
+  const showSafeguarding = referral.priority === 'Safeguarding' || Boolean(referral.safeguardingConcern);
+
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <Link
-          href="/"
-          onClick={event => {
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-              return;
-            }
-
-            event.preventDefault();
-            onNavigate('/');
-          }}
-        >
-          Home
-        </Link>
-      </header>
+      <PageHeader currentPath="/referral-detail" onNavigate={onNavigate} />
 
       <main className={styles.main}>
         <div className={styles.intro}>
-          <Title1 as="h1">Helen Cartwright</Title1>
-          <div className={styles.meta}>
-            <PriorityBadge priority="Safeguarding" />
-            <StatusBadge status="Assessing" />
-            <Caption1>2 days open</Caption1>
+          <Caption1>
+            <AppLink href="/referral" onNavigate={onNavigate}>
+              Referrals
+            </AppLink>
+            {` / ${referral.name}`}
+          </Caption1>
+          <div className={styles.introHeader}>
+            <Title1 as="h1">{referral.name}</Title1>
+            <Button appearance="primary" onClick={() => onNavigate(`/allocation?id=${referral.id}`)}>
+              {referral.assignedWorker ? 'Change assigned worker' : 'Assign a worker'}
+            </Button>
           </div>
-          <Body1 as="p">Referral for adult social care support. Opened by NHS discharge liaison.</Body1>
+          <div className={styles.meta}>
+            <PriorityBadge priority={referral.priority} />
+            <StatusBadge status={referral.status} />
+            <Caption1>{formatDaysOpen(referral.daysOpen)} open</Caption1>
+          </div>
+          <Body1 as="p">{displayValue(referral.reason)}</Body1>
         </div>
 
-        <MessageBar intent="warning" layout="multiline">
-          <MessageBarBody>
-            <MessageBarTitle>Safeguarding information is on this record</MessageBarTitle>
-            Open the Risk and safeguarding tab before making allocation decisions. This flags a concern about the
-            person, not a judgement of them.
-          </MessageBarBody>
-        </MessageBar>
+        {showSafeguarding ? (
+          <MessageBar intent="warning" layout="multiline">
+            <MessageBarBody>
+              <MessageBarTitle>Safeguarding information is on this record</MessageBarTitle>
+              Open the Risk and safeguarding tab before making allocation decisions. This flags a concern about the
+              person, not a judgement of them.
+            </MessageBarBody>
+          </MessageBar>
+        ) : null}
 
         <TabList
           selectedValue={selectedTab}
@@ -254,16 +253,20 @@ export const ReferralDetailPage = (props: ReferralDetailPageProps) => {
             <div className={styles.fields}>
               <ReadOnlyField label="Status">
                 <div className={styles.badgeField}>
-                  <StatusBadge status="Assessing" />
+                  <StatusBadge status={referral.status} />
                 </div>
               </ReadOnlyField>
               <ReadOnlyField label="Priority">
                 <div className={styles.badgeField}>
-                  <PriorityBadge priority="Safeguarding" />
+                  <PriorityBadge priority={referral.priority} />
                 </div>
               </ReadOnlyField>
               <ReadOnlyField label="Assigned worker">
-                <Persona name="James Osei" size="small" avatar={{ color: 'colorful' }} />
+                {referral.assignedWorker ? (
+                  <Persona name={referral.assignedWorker} size="small" avatar={{ color: 'colorful' }} />
+                ) : (
+                  <Body1>Not assigned</Body1>
+                )}
               </ReadOnlyField>
             </div>
           </div>
@@ -273,19 +276,19 @@ export const ReferralDetailPage = (props: ReferralDetailPageProps) => {
           <div className={styles.panel} role="tabpanel">
             <div className={styles.fields}>
               <ReadOnlyField label="Full name">
-                <Body1>Helen Cartwright</Body1>
+                <Body1>{referral.name}</Body1>
               </ReadOnlyField>
               <ReadOnlyField label="Date of birth">
-                <Body1>12 March 1948</Body1>
+                <Body1>{displayValue(referral.dateOfBirth)}</Body1>
               </ReadOnlyField>
               <ReadOnlyField
                 label="NHS number"
                 hint={<Caption1 className={styles.hint}>Used to match the person to their health record.</Caption1>}
               >
-                <Body1>943 476 5919</Body1>
+                <Body1>{displayValue(referral.nhsNumber)}</Body1>
               </ReadOnlyField>
               <ReadOnlyField label="Address">
-                <Body1>14 Hartwell Close, Leeds, LS6 2PN</Body1>
+                <Body1>{displayValue(referral.address)}</Body1>
               </ReadOnlyField>
             </div>
           </div>
@@ -303,13 +306,10 @@ export const ReferralDetailPage = (props: ReferralDetailPageProps) => {
                   </Caption1>
                 }
               >
-                <Body1>
-                  Neighbour reported that Helen has been left without food or heating for several days. Possible neglect
-                  by an informal carer.
-                </Body1>
+                <Body1>{displayValue(referral.safeguardingConcern)}</Body1>
               </ReadOnlyField>
               <ReadOnlyField label="Immediate risk">
-                <Body1>Yes</Body1>
+                <Body1>{displayValue(referral.immediateRisk)}</Body1>
               </ReadOnlyField>
             </div>
           </div>

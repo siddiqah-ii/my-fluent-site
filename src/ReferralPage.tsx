@@ -13,7 +13,6 @@ import {
   DataGridRow,
   Dropdown,
   Field,
-  Link,
   MessageBar,
   MessageBarBody,
   MessageBarTitle,
@@ -29,22 +28,15 @@ import {
 } from '@fluentui/react-components';
 import type { TableColumnDefinition } from '@fluentui/react-components';
 import { OpenRegular } from '@fluentui/react-icons';
+import { AppLink, PageHeader } from './AppNav';
 import { PriorityBadge, StatusBadge, type ReferralPriority, type ReferralStatus } from './ReferralBadges';
+import { formatDaysOpen, type Referral } from './referrals';
 
 const useStyles = makeStyles({
   page: {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
-  },
-  header: {
-    borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXXL}`,
-    maxWidth: '1120px',
-    width: '100%',
-    boxSizing: 'border-box',
-    marginLeft: 'auto',
-    marginRight: 'auto',
   },
   main: {
     display: 'flex',
@@ -61,6 +53,13 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
+  },
+  introHeader: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: tokens.spacingHorizontalM,
   },
   toolbar: {
     display: 'flex',
@@ -90,74 +89,6 @@ const useStyles = makeStyles({
   },
 });
 
-type Referral = {
-  id: string;
-  name: string;
-  assignedWorker: string | null;
-  daysOpen: number;
-  status: ReferralStatus;
-  priority: ReferralPriority;
-};
-
-const referrals: Referral[] = [
-  {
-    id: '1',
-    name: 'Margaret Thornton',
-    assignedWorker: 'Sarah Kapoor',
-    daysOpen: 1,
-    status: 'New',
-    priority: 'Standard',
-  },
-  {
-    id: '2',
-    name: 'David Okonkwo',
-    assignedWorker: 'James Osei',
-    daysOpen: 3,
-    status: 'New',
-    priority: 'Urgent',
-  },
-  {
-    id: '3',
-    name: 'Thomas Brennan',
-    assignedWorker: null,
-    daysOpen: 1,
-    status: 'New',
-    priority: 'Safeguarding',
-  },
-  {
-    id: '4',
-    name: 'Helen Cartwright',
-    assignedWorker: 'James Osei',
-    daysOpen: 2,
-    status: 'Assessing',
-    priority: 'Safeguarding',
-  },
-  {
-    id: '5',
-    name: 'Patricia Hewitt',
-    assignedWorker: null,
-    daysOpen: 14,
-    status: 'Assessing',
-    priority: 'Standard',
-  },
-  {
-    id: '6',
-    name: 'Ibrahim Rahman',
-    assignedWorker: 'Sarah Kapoor',
-    daysOpen: 6,
-    status: 'Allocated',
-    priority: 'Standard',
-  },
-  {
-    id: '7',
-    name: 'Arthur Greenfield',
-    assignedWorker: 'Claire Byrne',
-    daysOpen: 28,
-    status: 'Closed',
-    priority: 'Standard',
-  },
-];
-
 const statusOrder: Record<ReferralStatus, number> = {
   New: 0,
   Assessing: 1,
@@ -174,11 +105,11 @@ const priorityOrder: Record<ReferralPriority, number> = {
 const statuses: ReferralStatus[] = ['New', 'Assessing', 'Allocated', 'Closed'];
 const priorities: ReferralPriority[] = ['Standard', 'Urgent', 'Safeguarding'];
 
-const workerNames = [
-  ...new Set(referrals.map(referral => referral.assignedWorker).filter((name): name is string => Boolean(name))),
-].sort((a, b) => a.localeCompare(b));
+const workerNamesFrom = (referrals: Referral[]) =>
+  [...new Set(referrals.map(referral => referral.assignedWorker).filter((name): name is string => Boolean(name)))].sort(
+    (a, b) => a.localeCompare(b),
+  );
 
-const formatDaysOpen = (days: number) => (days === 1 ? '1 day' : `${days} days`);
 const workerLabel = (worker: string | null) => worker ?? 'Not assigned';
 
 const WorkerCell = (props: { worker: string | null; className: string }) => {
@@ -195,12 +126,19 @@ const WorkerCell = (props: { worker: string | null; className: string }) => {
   return <Persona name={worker} size="extra-small" textAlignment="center" avatar={{ color: 'colorful' }} />;
 };
 
-const columns = (unassignedClassName: string): TableColumnDefinition<Referral>[] => [
+const columns = (
+  unassignedClassName: string,
+  onNavigate: (path: string) => void,
+): TableColumnDefinition<Referral>[] => [
   createTableColumn<Referral>({
     columnId: 'name',
     compare: (a, b) => a.name.localeCompare(b.name),
     renderHeaderCell: () => 'Name',
-    renderCell: item => <Body1Strong>{item.name}</Body1Strong>,
+    renderCell: item => (
+      <AppLink href={`/referral-detail?id=${item.id}`} onNavigate={onNavigate} ariaLabel={`Open referral for ${item.name}`}>
+        <Body1Strong>{item.name}</Body1Strong>
+      </AppLink>
+    ),
   }),
   createTableColumn<Referral>({
     columnId: 'priority',
@@ -230,17 +168,23 @@ const columns = (unassignedClassName: string): TableColumnDefinition<Referral>[]
     columnId: 'actions',
     renderHeaderCell: () => 'Open',
     renderCell: item => (
-      <Button appearance="transparent" icon={<OpenRegular />} aria-label={`Open referral for ${item.name}`} />
+      <Button
+        appearance="transparent"
+        icon={<OpenRegular />}
+        aria-label={`Open referral for ${item.name}`}
+        onClick={() => onNavigate(`/referral-detail?id=${item.id}`)}
+      />
     ),
   }),
 ];
 
 type ReferralPageProps = {
+  referrals: Referral[];
   onNavigate: (path: string) => void;
 };
 
 export const ReferralPage = (props: ReferralPageProps) => {
-  const { onNavigate } = props;
+  const { referrals, onNavigate } = props;
   const styles = useStyles();
   const statusId = useId('status-filter');
   const priorityId = useId('priority-filter');
@@ -251,7 +195,8 @@ export const ReferralPage = (props: ReferralPageProps) => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [workerFilter, setWorkerFilter] = useState('all');
 
-  const tableColumns = useMemo(() => columns(styles.unassigned), [styles.unassigned]);
+  const tableColumns = useMemo(() => columns(styles.unassigned, onNavigate), [onNavigate, styles.unassigned]);
+  const workerNames = useMemo(() => workerNamesFrom(referrals), [referrals]);
   const filtersActive = statusFilter !== 'all' || priorityFilter !== 'all' || workerFilter !== 'all' || query.trim() !== '';
 
   const safeguardingCount = referrals.filter(referral => referral.priority === 'Safeguarding').length;
@@ -273,7 +218,7 @@ export const ReferralPage = (props: ReferralPageProps) => {
 
       return matchesSearch && matchesStatus && matchesPriority && matchesWorker;
     });
-  }, [priorityFilter, query, statusFilter, workerFilter]);
+  }, [priorityFilter, query, referrals, statusFilter, workerFilter]);
 
   const clearFilters = () => {
     setQuery('');
@@ -284,25 +229,16 @@ export const ReferralPage = (props: ReferralPageProps) => {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <Link
-          href="/"
-          onClick={event => {
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-              return;
-            }
-
-            event.preventDefault();
-            onNavigate('/');
-          }}
-        >
-          Home
-        </Link>
-      </header>
+      <PageHeader currentPath="/referral" maxWidth="1120px" onNavigate={onNavigate} />
 
       <main className={styles.main}>
         <div className={styles.intro}>
-          <Title1 as="h1">Referrals</Title1>
+          <div className={styles.introHeader}>
+            <Title1 as="h1">Referrals</Title1>
+            <Button appearance="primary" onClick={() => onNavigate('/new-referral')}>
+              New referral
+            </Button>
+          </div>
           <Body1 as="p">
             Track and manage adult social care referrals. Search by name, filter by status or priority, and monitor each
             case from referral through to allocation.

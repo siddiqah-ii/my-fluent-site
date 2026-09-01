@@ -4,7 +4,6 @@ import {
   Body1Strong,
   Caption1,
   Card,
-  Link,
   Title1,
   Title3,
   makeStyles,
@@ -19,6 +18,7 @@ import {
   PeopleTeamRegular,
   TableRegular,
 } from '@fluentui/react-icons';
+import { AppLink, PageHeader } from './AppNav';
 
 const useStyles = makeStyles({
   page: {
@@ -93,34 +93,6 @@ type ScreenCard = {
   title: string;
   description: string;
   icon: ReactNode;
-};
-
-const AppLink = (props: {
-  href: string;
-  className?: string;
-  ariaLabel?: string;
-  children: ReactNode;
-  onNavigate: (path: string) => void;
-}) => {
-  const { href, className, ariaLabel, children, onNavigate } = props;
-
-  return (
-    <Link
-      href={href}
-      className={className}
-      aria-label={ariaLabel}
-      onClick={event => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-          return;
-        }
-
-        event.preventDefault();
-        onNavigate(href);
-      }}
-    >
-      {children}
-    </Link>
-  );
 };
 
 const ScreenLink = (props: {
@@ -198,6 +170,7 @@ export const HomePage = (props: HomePageProps) => {
 
   return (
     <div className={styles.page}>
+      <PageHeader currentPath="/" maxWidth="880px" onNavigate={onNavigate} />
       <main className={styles.main}>
         <div className={styles.hero}>
           <Title1 as="h1">Fluent UI exploration</Title1>

@@ -1,19 +1,11 @@
-import { Body1, Caption1, Link, Title1, Title2, Title3, makeStyles, tokens } from '@fluentui/react-components';
+import { Body1, Caption1, Title1, Title2, Title3, makeStyles, tokens } from '@fluentui/react-components';
+import { AppLink, PageHeader } from './AppNav';
 
 const useStyles = makeStyles({
   page: {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
-  },
-  header: {
-    borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXXL}`,
-    maxWidth: '960px',
-    width: '100%',
-    boxSizing: 'border-box',
-    marginLeft: 'auto',
-    marginRight: 'auto',
   },
   main: {
     display: 'flex',
@@ -55,27 +47,16 @@ export const DesignBriefPage = (props: DesignBriefPageProps) => {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <Link
-          href="/"
-          onClick={event => {
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-              return;
-            }
-
-            event.preventDefault();
-            onNavigate('/');
-          }}
-        >
-          Home
-        </Link>
-      </header>
+      <PageHeader currentPath="/design-brief" onNavigate={onNavigate} />
 
       <main className={styles.main}>
         <div className={styles.intro}>
           <Title1 as="h1">Design Brief</Title1>
           <Title2 as="h2">Adult Social Care Referral Tracker</Title2>
           <Caption1 as="p">Fluent 2 practice project · Department for Health and Social Care context</Caption1>
+          <AppLink href="/referral" onNavigate={onNavigate}>
+            Open the referral tracker
+          </AppLink>
         </div>
 
         <section className={styles.section}>
